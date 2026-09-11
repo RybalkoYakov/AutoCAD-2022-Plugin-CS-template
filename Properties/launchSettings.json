@@ -1,0 +1,18 @@
+{
+  "profiles": {
+    "AutoCAD_2027_Plugin_CS1": {
+      "commandName": "Project"
+    },
+    "Acad": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Autodesk\\AutoCAD 2027\\acad.exe"
+    },
+    "Civil3D 2022 Debug": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Autodesk\\AutoCAD 2022\\acad.exe",
+      "commandLineArgs": "/ld \"C:\\Program Files\\Autodesk\\AutoCAD 2022\\C3D\\AecBase.dbx\" /p \"<<C3D_Metric>>\"",
+      "workingDirectory": "C:\\Program Files\\Autodesk\\AutoCAD 2022\\UserDataCache\\",
+      "debugEngines": "managed-framework"
+    }
+  }
+}
