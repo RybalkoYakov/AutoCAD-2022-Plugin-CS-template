@@ -1,32 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-	<TargetFramework>net48</TargetFramework>
-	<LangVersion>latest</LangVersion>
-    <RootNamespace>AutoCAD_2027_Plugin_CS1</RootNamespace>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>MyCivilPlugin</RootNamespace>
     <Platforms>x64</Platforms>
-	<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-	<UseWindowsForms>true</UseWindowsForms>
-	<UseWPF>true</UseWPF>
-	<ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
   </PropertyGroup>
   <ItemGroup>
-	  <PackageReference Include="AutoCAD.NET" Version="24.1.51000" />
-	  <PackageReference Include="Civil3D2022.Base" Version="1.0.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Update="myCommands.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>myCommands.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Update="myCommands.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>myCommands.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
+    <PackageReference Include="AutoCAD.NET" Version="24.1.51000" />
+    <PackageReference Include="Civil3D2022.Base" Version="1.0.0" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
