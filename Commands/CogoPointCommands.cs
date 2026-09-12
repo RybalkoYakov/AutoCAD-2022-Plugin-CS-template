@@ -3,9 +3,9 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Civil.ApplicationServices;
-using MyCivilPlugin.Models;
-using MyCivilPlugin.Services;
-using MyCivilPlugin.UI;
+using MyCivilPlugin.Domain.Models;
+using MyCivilPlugin.Domain.Services;
+using MyCivilPlugin.Infrastructure.CadIntegration;
 using System.Collections.Generic;
 using AcApp = Autodesk.AutoCAD.ApplicationServices.Application;
 
@@ -17,29 +17,57 @@ namespace MyCivilPlugin.Commands
         public void RandomizePointElevation()
         {
             Editor ed = AcApp.DocumentManager.MdiActiveDocument.Editor;
-            CivilDocument civilDoc = CivilApplication.ActiveDocument;
 
+            // 1. Запрос выделения
+            PromptSelectionOptions selOpts = new PromptSelectionOptions
+            {
+                MessageForAdding = "\nВыберите точки COGO для смещения по Z: "
+            };
+            SelectionFilter filter = new SelectionFilter(
+                new[] { new TypedValue((int)DxfCode.Start, "AECC_COGO_POINT") });
+
+            PromptSelectionResult selRes = ed.GetSelection(selOpts, filter);
+            if (selRes.Status != PromptStatus.OK)
+            {
+                ed.WriteMessage("\nТочки не выбраны. Операция отменена.");
+                return;
+            }
+
+            List<ObjectId> selectedPoints = new List<ObjectId>(selRes.Value.GetObjectIds());
+
+            // 2. Параметры
             if (!CommandLineInput.TryGetElevationOffsetOptions(ed, out ElevationOffsetOptions options))
             {
                 ed.WriteMessage("\nОперация отменена.");
                 return;
             }
 
-            string message = $"\nБудут изменены высоты всех точек COGO. " +
-                             $"Смещение в диапазоне [{options.MinOffset:F3}, {options.MaxOffset:F3}] м.";
+            // 3. Подтверждение
+            string message =
+                $"\nБудут изменены высоты {selectedPoints.Count} точек COGO. " +
+                $"Смещение в диапазоне [{options.MinOffset:F3}, {options.MaxOffset:F3}] м.";
             if (!CommandLineInput.AskConfirmation(ed, message))
             {
                 ed.WriteMessage("\nОперация отменена.");
                 return;
             }
 
+            // 4. Выполнение
             using (Transaction ts = AcApp.DocumentManager.MdiActiveDocument.Database.TransactionManager.StartTransaction())
             {
                 CogoPointElevationService.Result result =
-                    CogoPointElevationService.RandomizeElevation(civilDoc, ts, options);
+                    CogoPointElevationService.RandomizeElevation(ts, selectedPoints, options);
                 ts.Commit();
 
-                ReportResult(ed, result);
+                if (result.Processed == 0)
+                {
+                    ed.WriteMessage("\nНе найдено ни одной точки COGO для обработки.");
+                    return;
+                }
+
+                ed.WriteMessage($"\nОбработано точек: {result.Processed}");
+                if (result.SkippedLocked > 0)
+                    ed.WriteMessage($"\nПропущено заблокированных точек: {result.SkippedLocked}");
             }
         }
 
@@ -112,7 +140,8 @@ namespace MyCivilPlugin.Commands
 
             // 3. Подтверждение
             string message =
-                $"\nБудет создано {selectedPoints.Count} новых точек в группе '{options.GroupName}'. " +
+                $"\nБудет создано {selectedPoints.Count} новых точек в группе '{options.GroupName}' " +
+                $"в осях текущей ПСК. " +
                 $"\nДиапазон X: [{options.MinOffsetX:F3}, {options.MaxOffsetX:F3}] м, " +
                 $"\nДиапазон Y: [{options.MinOffsetY:F3}, {options.MaxOffsetY:F3}] м, " +
                 $"\nДиапазон Z: [{options.MinOffsetZ:F3}, {options.MaxOffsetZ:F3}] м.";
@@ -123,11 +152,14 @@ namespace MyCivilPlugin.Commands
                 return;
             }
 
-            // 4. Выполнение
+            // 4. Получаем матрицу текущей ПСК
+            Matrix3d ucsToWcs = ed.CurrentUserCoordinateSystem;
+
+            // 5. Выполнение
             using (Transaction ts = AcApp.DocumentManager.MdiActiveDocument.Database.TransactionManager.StartTransaction())
             {
                 CogoPointCreationService.Result result =
-                    CogoPointCreationService.CreateOffsetPoints(civilDoc, ts, selectedPoints, options);
+                    CogoPointCreationService.CreateOffsetPoints(civilDoc, ts, selectedPoints, options, ucsToWcs);
                 ts.Commit();
 
                 ed.WriteMessage("\n--- Создание точек завершено ---");

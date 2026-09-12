@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using Autodesk.AutoCAD.DatabaseServices;
-using Autodesk.Civil.ApplicationServices;
 using Autodesk.Civil.DatabaseServices;
-using MyCivilPlugin.Models;
+using MyCivilPlugin.Domain.Models;
 
-namespace MyCivilPlugin.Services
+namespace MyCivilPlugin.Domain.Services
 {
     internal static class CogoPointElevationService
     {
@@ -14,15 +14,18 @@ namespace MyCivilPlugin.Services
             public int SkippedLocked { get; set; }
         }
 
+        /// <summary>
+        /// Применяет случайное смещение к высотам указанных точек COGO.
+        /// </summary>
         public static Result RandomizeElevation(
-            CivilDocument civilDoc,
             Transaction ts,
+            IReadOnlyList<ObjectId> pointIds,
             ElevationOffsetOptions options)
         {
             Random rnd = new Random();
             Result result = new Result();
 
-            foreach (ObjectId pointId in civilDoc.CogoPoints)
+            foreach (ObjectId pointId in pointIds)
             {
                 CogoPoint cogoPoint = ts.GetObject(pointId, OpenMode.ForWrite) as CogoPoint;
                 if (cogoPoint == null) continue;

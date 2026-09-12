@@ -1,4 +1,4 @@
-﻿namespace MyCivilPlugin.Models
+﻿namespace MyCivilPlugin.Domain.Models
 {
     /// <summary>
     /// Параметры для создания новых точек COGO со случайным смещением в заданных диапазонах.
@@ -13,7 +13,7 @@
         public double MinOffsetY { get; set; } = -0.05;
         public double MaxOffsetY { get; set; } = 0.05;
 
-        public double MinOffsetZ { get; set; } = -0.02;
+        public double MinOffsetZ { get; set; } = -0.05;
         public double MaxOffsetZ { get; set; } = 0.05;
 
         public bool IsValid(out string error)

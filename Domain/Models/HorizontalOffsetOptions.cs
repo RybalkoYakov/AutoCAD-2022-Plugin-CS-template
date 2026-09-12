@@ -1,4 +1,4 @@
-﻿namespace MyCivilPlugin.Models
+﻿namespace MyCivilPlugin.Domain.Models
 {
     public class HorizontalOffsetOptions
     {

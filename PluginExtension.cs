@@ -1,22 +1,39 @@
-﻿using Autodesk.AutoCAD.Runtime;
+﻿using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.Runtime;
+using Microsoft.Extensions.DependencyInjection;
+using MyCivilPlugin.Application;
+using MyCivilPlugin.Infrastructure.Ai;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using AcApp = Autodesk.AutoCAD.ApplicationServices.Application;
 
-namespace AutoCAD_2027_Plugin_CS1
+[assembly: ExtensionApplication(typeof(MyCivilPlugin.PluginExtension))]
+
+namespace MyCivilPlugin
 {
     public class PluginExtension : IExtensionApplication
     {
+        public static ServiceProvider Services { get; private set; }
+
         public void Initialize()
         {
-            // Add your initialization code here
+            var services = new ServiceCollection();
+
+            // Application
+            services.AddSingleton<ToolRegistry>();
+            services.AddSingleton<AiOrchestrator>();
+
+            // Infrastructure
+            services.AddSingleton<ILlmClient, StubLlmClient>(); // заменим на OpenAI позже
+
+            Services = services.BuildServiceProvider();
+
+            var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
+            ed?.WriteMessage($"\nMyCivilPlugin загружен. Инструментов в реестре: {Services.GetRequiredService<ToolRegistry>().All.Count}");
         }
 
         public void Terminate()
         {
-            // Add your termination code here
+            Services?.Dispose();
         }
     }
 }

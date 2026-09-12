@@ -3,9 +3,9 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.Civil.ApplicationServices;
 using Autodesk.Civil.DatabaseServices;
-using MyCivilPlugin.Models;
+using MyCivilPlugin.Domain.Models;
 
-namespace MyCivilPlugin.Services
+namespace MyCivilPlugin.Domain.Services
 {
     /// <summary>
     /// Сервис для массового горизонтального смещения точек COGO в текущей ПСК.

@@ -14,6 +14,8 @@
   <ItemGroup>
     <PackageReference Include="AutoCAD.NET" Version="24.1.51000" />
     <PackageReference Include="Civil3D2022.Base" Version="1.0.0" />
+	<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+	<PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

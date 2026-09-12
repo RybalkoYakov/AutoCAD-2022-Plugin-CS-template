@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.Civil.ApplicationServices;
 using Autodesk.Civil.DatabaseServices;
-using MyCivilPlugin.Models;
+using MyCivilPlugin.Domain.Models;
 
-namespace MyCivilPlugin.Services
+namespace MyCivilPlugin.Domain.Services
 {
     internal static class CogoPointCreationService
     {
@@ -20,14 +19,16 @@ namespace MyCivilPlugin.Services
         }
 
         /// <summary>
-        /// Создаёт новые точки COGO со случайным смещением от выбранных
+        /// Создаёт новые точки COGO со случайным смещением от выбранных в осях текущей ПСК
         /// и помещает их в новую группу точек.
         /// </summary>
+        /// <param name="ucsToWcs">Матрица перехода из ПСК в МСК (Editor.CurrentUserCoordinateSystem).</param>
         public static Result CreateOffsetPoints(
             CivilDocument civilDoc,
             Transaction ts,
             List<ObjectId> selectedPoints,
-            PointCreationOptions options)
+            PointCreationOptions options,
+            Matrix3d ucsToWcs)
         {
             Result result = new Result();
             Random rnd = new Random();
@@ -37,7 +38,10 @@ namespace MyCivilPlugin.Services
             result.GroupId = groupId;
             PointGroup group = ts.GetObject(groupId, OpenMode.ForWrite) as PointGroup;
 
-            // 2. Создаём новые точки
+            // 2. Готовим обратную матрицу (МСК -> ПСК)
+            Matrix3d wcsToUcs = ucsToWcs.Inverse();
+
+            // 3. Создаём новые точки
             CogoPointCollection cogoPoints = civilDoc.CogoPoints;
             List<uint> newPointNumbers = new List<uint>();
 
@@ -46,26 +50,35 @@ namespace MyCivilPlugin.Services
                 CogoPoint original = ts.GetObject(pointId, OpenMode.ForRead) as CogoPoint;
                 if (original == null) continue;
 
-                // Случайные смещения в заданных диапазонах
+                // Случайные смещения в осях ПСК
                 double dx = options.MinOffsetX + rnd.NextDouble() * (options.MaxOffsetX - options.MinOffsetX);
                 double dy = options.MinOffsetY + rnd.NextDouble() * (options.MaxOffsetY - options.MinOffsetY);
                 double dz = options.MinOffsetZ + rnd.NextDouble() * (options.MaxOffsetZ - options.MinOffsetZ);
 
-                Point3d newLocation = new Point3d(
-                    original.Easting + dx,
-                    original.Northing + dy,
-                    original.Elevation + dz);
+                // Координаты исходной точки из МСК -> в ПСК
+                Point3d wcsPoint = new Point3d(original.Easting, original.Northing, original.Elevation);
+                Point3d ucsPoint = wcsPoint.TransformBy(wcsToUcs);
 
-                ObjectId newPointId = cogoPoints.Add(newLocation, false);
-                CogoPoint newPoint = ts.GetObject(newPointId, OpenMode.ForRead) as CogoPoint;
+                // Применяем смещение в осях ПСК
+                Point3d shiftedUcs = new Point3d(ucsPoint.X + dx, ucsPoint.Y + dy, ucsPoint.Z + dz);
+
+                // Обратно в МСК
+                Point3d shiftedWcs = shiftedUcs.TransformBy(ucsToWcs);
+
+                // Создаём точку
+                ObjectId newPointId = cogoPoints.Add(shiftedWcs, false);
+                result.CreatedCount++;
+
+                // Записываем описание со ссылкой на исходную точку
+                CogoPoint newPoint = ts.GetObject(newPointId, OpenMode.ForWrite) as CogoPoint;
                 if (newPoint != null)
                 {
+                    newPoint.RawDescription = $"№{original.PointNumber}, \ndx: {dx:F3}, \ndy: {dy:F3}, \ndz: {dz:F3}";
                     newPointNumbers.Add(newPoint.PointNumber);
                 }
-                result.CreatedCount++;
             }
 
-            // 3. Настраиваем запрос группы — включаем только что созданные точки по номерам
+            // 4. Настраиваем запрос группы
             if (newPointNumbers.Count > 0)
             {
                 StandardPointGroupQuery query = new StandardPointGroupQuery();
@@ -77,9 +90,6 @@ namespace MyCivilPlugin.Services
             return result;
         }
 
-        /// <summary>
-        /// Формирует строку вида "1,2,3-7,10" для StandardPointGroupQuery.IncludeNumbers.
-        /// </summary>
         private static string BuildNumberList(List<uint> numbers)
         {
             numbers.Sort();
@@ -90,7 +100,6 @@ namespace MyCivilPlugin.Services
                 uint start = numbers[i];
                 uint end = start;
 
-                // Ищем непрерывный диапазон
                 while (i + 1 < numbers.Count && numbers[i + 1] == end + 1)
                 {
                     end = numbers[i + 1];

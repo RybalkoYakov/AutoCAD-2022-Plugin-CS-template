@@ -1,7 +1,7 @@
 ﻿using Autodesk.AutoCAD.EditorInput;
-using MyCivilPlugin.Models;
+using MyCivilPlugin.Domain.Models;
 
-namespace MyCivilPlugin.UI
+namespace MyCivilPlugin
 {
     internal static class CommandLineInput
     {
